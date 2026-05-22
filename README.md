@@ -55,6 +55,8 @@ Replace `<ver>` with your KiCad version (e.g. `8.0`, `7.0`). Restart KiCad or us
 
 Footprints are sorted by their current position along the chosen axis. The first footprint stays anchored; the rest are moved so each courtyard edge meets the previous one (plus the specified gap).
 
+![Snap CourtYard dialog](images/snap_courtyard_dialog.png)
+
 ## Project Structure
 
 ```
