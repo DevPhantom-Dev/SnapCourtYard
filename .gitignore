@@ -1,0 +1,38 @@
+# ── Python ────────────────────────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.egg-info/
+.eggs/
+*.egg
+
+# ── Virtual environments ──────────────────────────────────────────────────────
+.venv/
+venv/
+env/
+ENV/
+
+# ── Build artifacts ───────────────────────────────────────────────────────────
+# Release zips are attached to GitHub Releases, not stored in the repo.
+dist/
+
+# Populated automatically by build_pcm.py from SnapCourtYard/ — not source.
+pcm/plugins/
+
+# ── Temp / scratch ────────────────────────────────────────────────────────────
+screenshot_temp.png
+*.tmp
+*.temp
+
+# ── IDE / editor ──────────────────────────────────────────────────────────────
+.claude/
+.vscode/
+.idea/
+*.swp
+*~
+
+# ── OS ────────────────────────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+desktop.ini

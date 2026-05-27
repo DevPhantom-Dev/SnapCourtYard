@@ -1,8 +1,0 @@
-# SnapCourtYard dependencies
-# KiCad will create a venv and install these before first run.
-#
-# kicad-python  — official Python bindings for the KiCad IPC API
-#                 https://gitlab.com/kicad/code/kicad-python
-#                 Requires KiCad 9.0+ with API server enabled:
-#                 Preferences > Plugins > Enable API server
-kicad-python>=0.4.0
