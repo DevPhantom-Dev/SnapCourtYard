@@ -1,0 +1,18 @@
+{
+    "$schema": "https://go.kicad.org/api/schemas/v1",
+    "identifier": "com.github.snapcourtyard",
+    "name": "Snap CourtYard",
+    "description": "Snap footprint courtyards edge-to-edge or corner-to-corner.",
+    "runtime": {
+        "type": "python"
+    },
+    "actions": [
+        {
+            "identifier": "snap_courtyard",
+            "name": "Snap CourtYard",
+            "description": "Snap selected footprint courtyards together (opens dialog).",
+            "entrypoint": "snap_courtyard_action.py",
+            "scopes": ["pcb"]
+        }
+    ]
+}
