@@ -1,76 +1,203 @@
-"""Edge-to-edge courtyard snapping for selected footprints."""
+"""Corner and edge courtyard snapping — pure Python, no KiCad API dependencies.
 
-import pcbnew
+All coordinates are in nanometres (KiCad internal units).
+1 mm = 1_000_000 nm.
+"""
 
+from __future__ import annotations
 
-AXIS_X = "x"
-AXIS_Y = "y"
+# ---------------------------------------------------------------------------
+# Constants
+# ---------------------------------------------------------------------------
 
+CORNERS = ("TL", "TR", "BL", "BR")
+CORNER_LABELS = {
+    "TL": "Top-Left",
+    "TR": "Top-Right",
+    "BL": "Bottom-Left",
+    "BR": "Bottom-Right",
+}
 
-def _courtyard_polyset(footprint):
-    """Return merged front+back courtyard SHAPE_POLY_SET, or None."""
-    layers = []
-    for layer_name in ("F_CrtYd", "B_CrtYd"):
-        layer_id = getattr(pcbnew, layer_name, None)
-        if layer_id is None:
-            continue
-        try:
-            poly = footprint.GetCourtyard(layer_id)
-        except Exception:
-            poly = None
-        if poly and poly.OutlineCount() > 0:
-            layers.append(poly)
-
-    if not layers:
-        return None
-
-    merged = pcbnew.SHAPE_POLY_SET()
-    for poly in layers:
-        merged.Append(poly)
-    return merged
+EDGES = ("T", "R", "B", "L")
+EDGE_LABELS = {"T": "Top", "R": "Right", "B": "Bottom", "L": "Left"}
+HORIZONTAL_EDGES = ("T", "B")
+VERTICAL_EDGES   = ("L", "R")
 
 
-def courtyard_bbox(footprint):
-    """Return BOX2I of footprint courtyard; falls back to footprint bbox if none."""
-    poly = _courtyard_polyset(footprint)
-    if poly is None or poly.OutlineCount() == 0:
-        return footprint.GetBoundingBox(False, False)
-    return poly.BBox()
+# ---------------------------------------------------------------------------
+# BBox — thin wrapper so callers don't depend on any KiCad type
+# ---------------------------------------------------------------------------
+
+class BBox:
+    """Axis-aligned bounding box in nanometres."""
+
+    __slots__ = ("left", "top", "right", "bottom")
+
+    def __init__(self, left: int, top: int, right: int, bottom: int) -> None:
+        self.left   = int(left)
+        self.top    = int(top)
+        self.right  = int(right)
+        self.bottom = int(bottom)
+
+    def __repr__(self) -> str:
+        return (f"BBox(left={self.left}, top={self.top}, "
+                f"right={self.right}, bottom={self.bottom})")
 
 
-def snap_edge_to_edge(footprints, axis=AXIS_X, gap_nm=0):
-    """Chain footprints so courtyards abut along given axis.
+def bbox_from_kipy(fp) -> BBox:
+    """Build a BBox from a kipy Footprint object.
 
-    Sort by current position on axis; anchor first; translate rest so leading
-    edge meets trailing edge of previous. gap_nm is extra spacing in nanometers.
-    Returns count of moved footprints.
+    kipy exposes ``fp.bounding_box`` as a ``Box2`` proto with
+    ``.start`` (top-left) and ``.end`` (bottom-right) Vector2 values,
+    both in nanometres.
+
+    NOTE: The KiCad IPC API does not yet expose individual courtyard
+    PCB_SHAPE strokes separately.  We therefore use the overall footprint
+    bounding box as a conservative approximation.  A future kipy release
+    may add a dedicated ``fp.courtyard_bounding_box`` property.
     """
-    if len(footprints) < 2:
-        return 0
+    bb = fp.bounding_box
+    return BBox(
+        left   = int(bb.start.x),
+        top    = int(bb.start.y),
+        right  = int(bb.end.x),
+        bottom = int(bb.end.y),
+    )
 
-    def pos_key(fp):
-        p = fp.GetPosition()
-        return p.x if axis == AXIS_X else p.y
 
-    ordered = sorted(footprints, key=pos_key)
-    moved = 0
+# ---------------------------------------------------------------------------
+# Unit helper
+# ---------------------------------------------------------------------------
 
-    prev_bbox = courtyard_bbox(ordered[0])
-    for fp in ordered[1:]:
-        cur_bbox = courtyard_bbox(fp)
-        if axis == AXIS_X:
-            delta = (prev_bbox.GetRight() + gap_nm) - cur_bbox.GetLeft()
-            offset = pcbnew.VECTOR2I(delta, 0)
+def from_mm(mm: float) -> int:
+    """Convert millimetres to KiCad internal units (nanometres)."""
+    return int(float(mm) * 1_000_000)
+
+
+# ---------------------------------------------------------------------------
+# Geometry helpers
+# ---------------------------------------------------------------------------
+
+def corner_point(bbox: BBox, corner: str) -> tuple[int, int]:
+    """Return (x, y) of the named corner.  KiCad y-axis grows downward."""
+    if corner not in CORNERS:
+        raise ValueError(f"Unknown corner: {corner!r}. Must be one of {CORNERS}.")
+    x = bbox.left  if corner in ("TL", "BL") else bbox.right
+    y = bbox.top   if corner in ("TL", "TR") else bbox.bottom
+    return x, y
+
+
+def edge_coord(bbox: BBox, edge: str) -> int:
+    """Return the scalar coordinate of the named bbox edge."""
+    if edge == "L": return bbox.left
+    if edge == "R": return bbox.right
+    if edge == "T": return bbox.top
+    if edge == "B": return bbox.bottom
+    raise ValueError(f"Unknown edge: {edge!r}. Must be one of {EDGES}.")
+
+
+# ---------------------------------------------------------------------------
+# Snap calculations — return (dx, dy) deltas, never mutate footprints
+# ---------------------------------------------------------------------------
+
+def delta_corner_to_corner(
+    anchor_bbox:   BBox,
+    move_bbox:     BBox,
+    anchor_corner: str,
+    move_corner:   str,
+    dx_nm: int = 0,
+    dy_nm: int = 0,
+) -> tuple[int, int]:
+    """Return (dx, dy) to translate the moving footprint so its chosen corner
+    meets the anchor's chosen corner (plus optional extra offset)."""
+    ax, ay = corner_point(anchor_bbox, anchor_corner)
+    mx, my = corner_point(move_bbox,   move_corner)
+    return ax - mx + dx_nm, ay - my + dy_nm
+
+
+def delta_edge_to_edge(
+    anchor_bbox: BBox,
+    move_bbox:   BBox,
+    anchor_edge: str,
+    move_edge:   str,
+    dx_nm: int = 0,
+    dy_nm: int = 0,
+) -> tuple[int, int]:
+    """Return (dx, dy) to translate the moving footprint so its chosen edge
+    meets the anchor's chosen edge.
+
+    Only the *perpendicular* axis is snapped; the parallel-axis position is
+    unchanged (user can nudge with dx_nm / dy_nm).
+    """
+    a_horiz = anchor_edge in HORIZONTAL_EDGES
+    m_horiz = move_edge   in HORIZONTAL_EDGES
+    if a_horiz != m_horiz:
+        raise ValueError(
+            "Anchor and moving edges must share orientation "
+            "(both T/B or both L/R)."
+        )
+    delta = edge_coord(anchor_bbox, anchor_edge) - edge_coord(move_bbox, move_edge)
+    if a_horiz:
+        return dx_nm, delta + dy_nm
+    else:
+        return delta + dx_nm, dy_nm
+
+
+# ---------------------------------------------------------------------------
+# Chain helper — drives a sequence of snaps
+# ---------------------------------------------------------------------------
+
+def chain_deltas(
+    bboxes:        list[BBox],
+    anchor_idx:    int,
+    a_slot:        str,
+    m_slot:        str,
+    dx_nm:         int = 0,
+    dy_nm:         int = 0,
+) -> list[tuple[int, int]]:
+    """Compute per-footprint (dx, dy) deltas for a full chain snap.
+
+    The footprint at *anchor_idx* stays fixed (delta = (0, 0)).
+    Every other footprint snaps to the previous one in chain order.
+
+    Returns a list of (dx, dy) with the same length as *bboxes*,
+    where bboxes[i] is the *original* bbox of footprint i.
+
+    Callers must apply each delta to the *cumulative* position:
+    after footprint i moves, its new bbox must be recomputed before
+    snapping footprint i+1 to it.
+    """
+    is_corner = a_slot in CORNERS
+
+    n = len(bboxes)
+    deltas: list[tuple[int, int]] = [(0, 0)] * n
+
+    # Build chain order: anchor first, then the rest in their original order.
+    others = [i for i in range(n) if i != anchor_idx]
+    chain = [anchor_idx] + others
+
+    # We need to track bbox positions as we move each footprint.
+    # Start with copies of the original bboxes.
+    current = [BBox(b.left, b.top, b.right, b.bottom) for b in bboxes]
+
+    for k in range(1, len(chain)):
+        prev_idx = chain[k - 1]
+        curr_idx = chain[k]
+        prev_bb  = current[prev_idx]
+        curr_bb  = current[curr_idx]
+
+        if is_corner:
+            dx, dy = delta_corner_to_corner(prev_bb, curr_bb, a_slot, m_slot,
+                                            dx_nm, dy_nm)
         else:
-            delta = (prev_bbox.GetBottom() + gap_nm) - cur_bbox.GetTop()
-            offset = pcbnew.VECTOR2I(0, delta)
+            dx, dy = delta_edge_to_edge(prev_bb, curr_bb, a_slot, m_slot,
+                                        dx_nm, dy_nm)
 
-        fp.Move(offset)
-        moved += 1
-        prev_bbox = courtyard_bbox(fp)
+        deltas[curr_idx] = (dx, dy)
 
-    return moved
+        # Shift current bbox so the next footprint snaps to the moved position.
+        b = current[curr_idx]
+        current[curr_idx] = BBox(b.left  + dx, b.top    + dy,
+                                 b.right + dx, b.bottom + dy)
 
-
-def selected_footprints(board):
-    return [fp for fp in board.GetFootprints() if fp.IsSelected()]
+    return deltas

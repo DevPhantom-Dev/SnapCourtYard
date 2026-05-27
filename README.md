@@ -7,9 +7,10 @@
 **KiCad PCB editor plugin — snap footprints edge-to-edge or corner-to-corner in one click.**
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-[![KiCad](https://img.shields.io/badge/KiCad-7.0%2B-brightgreen?logo=data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCI+PHBhdGggZmlsbD0id2hpdGUiIGQ9Ik0xMiAyQzYuNDggMiAyIDYuNDggMiAxMnM0LjQ4IDEwIDEwIDEwIDEwLTQuNDggMTAtMTBTMTcuNTIgMiAxMiAyeiIvPjwvc3ZnPg==)](https://www.kicad.org/)
-[![Python](https://img.shields.io/badge/Python-3.x-yellow?logo=python&logoColor=white)](https://www.python.org/)
-[![Version](https://img.shields.io/badge/version-1.9.0-orange)](https://github.com/DevPhantom-Dev/SnapCourtYard/releases)
+[![KiCad](https://img.shields.io/badge/KiCad-9.0%2B-brightgreen)](https://www.kicad.org/)
+[![API](https://img.shields.io/badge/API-IPC%20%28kicad--python%29-blue)](https://gitlab.com/kicad/code/kicad-python)
+[![Python](https://img.shields.io/badge/Python-3.9%2B-yellow?logo=python&logoColor=white)](https://www.python.org/)
+[![Version](https://img.shields.io/badge/version-2.0.0-orange)](https://github.com/DevPhantom-Dev/SnapCourtYard/releases)
 
 </div>
 
@@ -90,18 +91,20 @@ The **anchor footprint stays fixed**. All other footprints are translated so the
 
 ```
 SnapCourtYard/
-├── SnapCourtYard/                  # Plugin package
-│   ├── __init__.py                 # Registers the plugin with KiCad
-│   ├── snap_courtyard_action.py    # ActionPlugin subclass + wxPython dialog
-│   └── snap_logic.py              # Bbox math — no wx/KiCad deps, easily testable
+├── SnapCourtYard/                   # Plugin package
+│   ├── plugin.json                  # KiCad IPC manifest (actions + runtime)
+│   ├── requirements.txt             # Python deps (kicad-python)
+│   ├── __init__.py                  # Package marker (no pcbnew registration)
+│   ├── snap_courtyard_action.py     # IPC entry point + wxPython dialog
+│   └── snap_logic.py               # Pure-Python geometry — no KiCad deps
 ├── images/
-│   └── snap_courtyard_dialog.png  # Screenshot used in this README
+│   └── snap_courtyard_dialog.png   # Screenshot used in this README
 ├── pcm/
-│   ├── metadata.json              # KiCad PCM package metadata
-│   └── resources/icon.png         # Plugin toolbar icon
-├── dist/                          # Built release archives
-├── build_pcm.py                   # Produces PCM-compatible .zip
-└── plugins.pdf                    # KiCad C++ plugin reference (informational)
+│   ├── metadata.json               # KiCad PCM package metadata
+│   └── resources/icon.png          # Plugin toolbar icon
+├── dist/                           # Built release archives
+├── build_pcm.py                    # Produces PCM-compatible .zip
+└── plugins.pdf                     # KiCad C++ plugin reference (informational)
 ```
 
 ---
@@ -118,8 +121,12 @@ Reads the version from `pcm/metadata.json` and writes `dist/SnapCourtYard-<versi
 
 ## 📋 Requirements
 
-- KiCad **7.0 or later** (tested on 7.x, 8.x, 10.x)
-- Python 3 *(bundled with KiCad — nothing extra to install)*
+- KiCad **9.0 or later**
+- **API server enabled** — KiCad → Preferences → Plugins → ✅ Enable API server
+- `kicad-python` *(installed automatically from `requirements.txt` on first run)*
+
+> **KiCad 7 / 8 users:** use release [v1.9.0](https://github.com/DevPhantom-Dev/SnapCourtYard/releases/tag/v1.9.0) which uses the legacy SWIG bindings.
+> v2.0.0+ targets the KiCad IPC API — the SWIG bindings are removed in KiCad V11.
 
 ---
 

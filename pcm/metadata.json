@@ -2,7 +2,7 @@
     "$schema": "https://go.kicad.org/pcm/schemas/v1",
     "name": "Snap CourtYard",
     "description": "Snap two footprint courtyards corner-to-corner or edge-to-edge.",
-    "description_full": "PCB editor action plugin. Select exactly two footprints, then pick a snap mode: Corner-to-Corner (choose a corner on the anchor and a corner on the moving footprint; both meet) or Edge-to-Edge (choose an edge on each; the moving footprint slides along the perpendicular axis until edges touch, parallel-axis position is preserved). Optional dx/dy offset in millimetres. Corners and edges come from the merged F.CrtYd + B.CrtYd courtyard bounding box; falls back to the footprint bounding box when no courtyard is defined. Rotation preserved; only translation applied.",
+    "description_full": "PCB editor IPC plugin (KiCad 9+). Select 2+ footprints and snap their courtyard bounding boxes together — Edge-to-Edge or Corner-to-Corner. Features: live PCB preview while the dialog is open, chain snapping for 3+ footprints in selection order, Shift+click toolbar to repeat last config silently, persistent settings, optional dx/dy offset. Uses the KiCad IPC API (kicad-python); no deprecated SWIG bindings. Rotation preserved; only translation applied.",
     "identifier": "com.github.snapcourtyard",
     "type": "plugin",
     "author": {
@@ -29,9 +29,9 @@
     ],
     "versions": [
         {
-            "version": "1.9.0",
+            "version": "2.0.0",
             "status": "stable",
-            "kicad_version": "7.0"
+            "kicad_version": "9.0"
         }
     ]
 }
