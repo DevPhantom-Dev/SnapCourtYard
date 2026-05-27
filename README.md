@@ -1,85 +1,128 @@
+<div align="center">
+
+<img src="pcm/resources/icon.png" width="80" alt="SnapCourtYard icon"/>
+
 # SnapCourtYard
 
-A KiCad PCB editor plugin that snaps selected footprints edge-to-edge (or corner-to-corner) using their courtyard outlines.
+**KiCad PCB editor plugin — snap footprints edge-to-edge or corner-to-corner in one click.**
 
-## What It Does
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![KiCad](https://img.shields.io/badge/KiCad-7.0%2B-brightgreen?logo=data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCI+PHBhdGggZmlsbD0id2hpdGUiIGQ9Ik0xMiAyQzYuNDggMiAyIDYuNDggMiAxMnM0LjQ4IDEwIDEwIDEwIDEwLTQuNDggMTAtMTBTMTcuNTIgMiAxMiAyeiIvPjwvc3ZnPg==)](https://www.kicad.org/)
+[![Python](https://img.shields.io/badge/Python-3.x-yellow?logo=python&logoColor=white)](https://www.python.org/)
+[![Version](https://img.shields.io/badge/version-1.9.0-orange)](https://github.com/DevPhantom-Dev/SnapCourtYard/releases)
 
-Select footprints in **pcbnew**, run the plugin, and they will be repositioned so their courtyard boundaries touch — with an optional gap. Useful for quickly packing components side-by-side without manual measurement.
+</div>
 
-**Snap modes**
+---
 
-| Mode | Behavior |
-|------|----------|
-| Edge-to-Edge | Moving footprint slides along the perpendicular axis until the chosen edges touch; parallel-axis position is preserved |
-| Corner-to-Corner | A chosen corner on the anchor and a chosen corner on the moving footprint are made to coincide |
+## ✨ What It Does
 
-Courtyards are derived from the merged `F.CrtYd` + `B.CrtYd` bounding box. When no courtyard polygon exists the footprint bounding box is used as a fallback. Only translation is applied — rotation is always preserved.
+Select two or more footprints in **pcbnew**, run the plugin, and they snap together instantly — courtyard boundary touching courtyard boundary, with an optional gap.
 
-## Requirements
+> No manual measuring. No calculator. Just select → snap → done.
 
-- KiCad 7.0 or later (tested on 7.x and 8.x)
-- Python 3 (bundled with KiCad)
+<div align="center">
+  <img src="images/snap_courtyard_dialog.png" width="600" alt="SnapCourtYard in action"/>
+  <br/>
+  <em>The plugin dialog: choose anchor, pick snap edges/corners, set optional offset, click OK.</em>
+</div>
 
-## Installation
+---
 
-### Option A — PCM (Plugin and Content Manager)
+## 🔧 Snap Modes
 
-1. Download the latest `.zip` from the [Releases](../../releases) page, **or** build it yourself:
-   ```
+| Mode | What happens |
+|------|-------------|
+| **Edge → Edge** | The moving footprint slides until the chosen edge touches the anchor's edge. Position along the parallel axis is unchanged. |
+| **Corner → Corner** | A chosen corner on the anchor meets a chosen corner on the moving footprint exactly. |
+
+Courtyards are built from the merged **F.CrtYd + B.CrtYd** bounding box.  
+Falls back to the footprint bounding box when no courtyard polygon is defined.  
+✅ Only translation applied — **rotation is always preserved**.
+
+---
+
+## 📦 Installation
+
+### Option A — Plugin and Content Manager *(recommended)*
+
+1. Grab the latest `.zip` from the [**Releases**](https://github.com/DevPhantom-Dev/SnapCourtYard/releases) page,  
+   **or** build it yourself:
+   ```bash
    python build_pcm.py
+   # → dist/SnapCourtYard-1.9.0-pcm.zip
    ```
-   The archive is written to `dist/SnapCourtYard-<version>-pcm.zip`.
+2. Open KiCad → **Plugin and Content Manager → Install from File…** → select the zip.
+3. Click **Apply Changes**.  
+   The toolbar button appears in pcbnew immediately (or use **Tools → External Plugins → Refresh**).
 
-2. In KiCad: **Plugin and Content Manager → Install from File…** → select the zip.
-3. Click **Apply Changes**. The toolbar button appears in pcbnew (use **Tools → External Plugins → Refresh** if it doesn't show immediately).
+### Option B — Manual copy
 
-### Option B — Manual
+Copy the `SnapCourtYard/` folder to your KiCad scripting plugins directory:
 
-Copy the `SnapCourtYard/` folder into your KiCad scripting plugins directory:
+| 🖥️ OS | 📂 Path |
+|--------|--------|
+| **Windows** | `%APPDATA%\kicad\<ver>\scripting\plugins\SnapCourtYard` |
+| **Linux** | `~/.local/share/kicad/<ver>/scripting/plugins/SnapCourtYard` |
+| **macOS** | `~/Documents/KiCad/<ver>/scripting/plugins/SnapCourtYard` |
 
-| OS | Path |
-|----|------|
-| Windows | `%APPDATA%\kicad\<ver>\scripting\plugins\SnapCourtYard` |
-| Linux | `~/.local/share/kicad/<ver>/scripting/plugins/SnapCourtYard` |
-| macOS | `~/Documents/KiCad/<ver>/scripting/plugins/SnapCourtYard` |
+> Replace `<ver>` with your KiCad version — e.g. `8.0` or `7.0`.  
+> Then restart KiCad or use **Tools → External Plugins → Refresh**.
 
-Replace `<ver>` with your KiCad version (e.g. `8.0`, `7.0`). Restart KiCad or use **Tools → External Plugins → Refresh**.
+---
 
-## Usage
+## 🚀 Usage
 
-1. Open a PCB in **pcbnew**.
-2. Select two or more footprints.
-3. Click the **Snap CourtYard** toolbar button, or go to **Tools → External Plugins → Snap CourtYard**.
-4. Choose the snap mode, axis (horizontal / vertical), and an optional gap in mm.
-5. Click **OK**.
+```
+1. Open a PCB in pcbnew
+2. Select 2+ footprints
+3. Click the Snap CourtYard toolbar button
+   (or Tools → External Plugins → Snap CourtYard)
+4. Pick snap mode, edges / corners, and optional dx/dy offset
+5. Click OK
+```
 
-Footprints are sorted by their current position along the chosen axis. The first footprint stays anchored; the rest are moved so each courtyard edge meets the previous one (plus the specified gap).
+The **anchor footprint stays fixed**. All other footprints are translated so their courtyard edge/corner meets the anchor's chosen edge/corner.
 
-![Snap CourtYard dialog](images/snap_courtyard_dialog.png)
+---
 
-## Project Structure
+## 🗂️ Project Structure
 
 ```
 SnapCourtYard/
-├── SnapCourtYard/          # Plugin package (copy this folder for manual install)
-│   ├── __init__.py         # Registers the plugin with KiCad
-│   ├── snap_courtyard_action.py  # ActionPlugin subclass + wxPython dialog
-│   └── snap_logic.py       # Courtyard bbox extraction & snapping math (no wx/KiCad deps)
+├── SnapCourtYard/                  # Plugin package
+│   ├── __init__.py                 # Registers the plugin with KiCad
+│   ├── snap_courtyard_action.py    # ActionPlugin subclass + wxPython dialog
+│   └── snap_logic.py              # Bbox math — no wx/KiCad deps, easily testable
+├── images/
+│   └── snap_courtyard_dialog.png  # Screenshot used in this README
 ├── pcm/
-│   └── metadata.json       # KiCad PCM package metadata
-├── dist/                   # Built release archives
-├── build_pcm.py            # Script to produce PCM-compatible .zip
-└── plugins.pdf             # Reference: KiCad C++ plugin system (informational only)
+│   ├── metadata.json              # KiCad PCM package metadata
+│   └── resources/icon.png         # Plugin toolbar icon
+├── dist/                          # Built release archives
+├── build_pcm.py                   # Produces PCM-compatible .zip
+└── plugins.pdf                    # KiCad C++ plugin reference (informational)
 ```
 
-## Building a Release
+---
+
+## 🔨 Building a Release
 
 ```bash
 python build_pcm.py
 ```
 
-Produces a versioned PCM archive in `dist/`. The version is read from `pcm/metadata.json`.
+Reads the version from `pcm/metadata.json` and writes `dist/SnapCourtYard-<version>-pcm.zip`.
 
-## License
+---
 
-MIT
+## 📋 Requirements
+
+- KiCad **7.0 or later** (tested on 7.x, 8.x, 10.x)
+- Python 3 *(bundled with KiCad — nothing extra to install)*
+
+---
+
+## 📄 License
+
+Released under the **MIT License** — see [`LICENSE`](LICENSE) for details.
